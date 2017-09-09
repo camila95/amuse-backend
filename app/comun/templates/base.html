@@ -1,0 +1,316 @@
+{% load static %}
+{% load humanize %}
+
+<!DOCTYPE html>
+<html>
+  <!--[if IE 9 ]><html class="ie9"><![endif]-->
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IngeMAX {% block title %}{% endblock title %}</title>
+    <!-- CSS -->
+    <link href="{% static 'vendors/bower_components/fullcalendar/dist/fullcalendar.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/animate.css/animate.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/sweetalert/dist/sweetalert.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/material-design-iconic-font/dist/css/material-design-iconic-font.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/chosen/chosen.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/bower_components/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendors/summernote/dist/summernote.css' %}" rel="stylesheet">
+    <link href="{% static 'css/app.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="{% static 'img/favicon.png' %}" rel="icon" sizes="32x32" />
+    {% block head %}{% endblock head %}
+  </head>
+  <body>
+    <header id="header" class="clearfix" data-ma-theme="bluegray">
+      <ul class="h-inner">
+        <li class="hi-trigger ma-trigger" data-ma-action="sidebar-open" data-ma-target="#sidebar">
+          <div class="line-wrap">
+            <div class="line top"></div>
+            <div class="line center"></div>
+            <div class="line bottom"></div>
+          </div>
+        </li>
+        <li class="hi-logo hidden-xs" style="display: inline-flex;">
+          <a href="/" id="a-inicio">IngeMAX MAFP</a>{% if agrupacion.es_etapa and agrupacion.agrupacion %}<a href="{% url 'principal:home_proyecto' agrupacion.agrupacion.pk %}"><i class="zmdi zmdi-chevron-right"></i> {{ agrupacion.agrupacion.nombre }}</a>{% endif %}{% if agrupacion %}<a href="{% if agrupacion.es_etapa %}{% url 'principal:home' agrupacion.pk %}{% else %}{% url 'principal:home_proyecto' agrupacion.pk %}{% endif %}"><i class="zmdi zmdi-chevron-right"></i> {{ agrupacion.nombre }} {% if subetapa and agrupacion.esta_compuesta_por_etapas %}<i class="zmdi zmdi-chevron-right"></i> {{ subetapa.nombre }}{% endif %}</a>{% endif %}
+        </li>
+        <li class="pull-right">
+          <ul class="hi-menu">
+            <li id="avance_tareas" class="hidden" style="margin-right: 30px; line-height: 36px">
+              <a class="background-color: rgba(0, 0, 0, 0)" href=""><i class="him-icon zmdi zmdi-refresh-sync spinner"></i> <strong>Calculando<span>.</span><span>.</span><span>.</span> <span id="celery-info">(<span id="completado">1</span> de <span id="tareas_totales">12</span> procesos completados)</span></strong></a>
+            </li>
+            {% if agrupacion %}
+              {% if agrupacion.es_cierre %}
+              <li>
+                <a><i class="him-icon fa fa-history"></i></a>
+              </li>
+              <li>
+                <select id="cierres" class="chosen">
+                  <option value="0">Actual</option>
+                  {% for cierre in agrupacion.get_cierres %}
+                  <option value="{{ cierre.pk }}" {% if cierre.pk == agrupacion.pk %}selected=""{% endif %}>{{ cierre.fecha_cierre|date:"m/Y" }}</option>
+                  {% endfor %}
+                </select>
+              </li>
+              {% endif %}
+              <li class="hidden-xs ma-trigger" id="boton_smart_panel" data-ma-action="sidebar-open" data-ma-target="#smart_panel">
+                <a style="padding-top: 0.55em;padding-bottom: 0.7em;"><img style="width:1.25em; height:1.25em;" src="{% static 'img/g-gerpro.svg' %}"></a>
+              </li>
+            {% endif %}
+            {% if agrupacion %}
+              <li class="dropdown" id="li_info_general">
+                <a data-toggle="dropdown" href="" id="info_general">
+                 <i class="him-icon zmdi zmdi-info" ></i>
+                </a>
+                <a data-toggle="dropdown" class="hidden" href="" id="ocultar_info_generales">
+                  <i class="him-icon zmdi zmdi-caret-up" id="icono_ocultar_info_generales"></i>
+                </a>
+              </li>
+            {% endif %}
+            <li class="dropdown" ng-controller="Notificaciones" >
+              <a ng-click="notificacionesVistas()" data-toggle="dropdown" href="" id="ver_notificaciones">
+                <i class="him-icon zmdi zmdi-notifications"> </i>
+                  <div ng-if=" sin_leer ">
+                    <i id="contador-notificaciones" class="him-counts"> {[{sin_leer}]}</i>
+                  </div>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg pull-right">
+                <div class="list-group him-notification">
+                  <div class="lg-header">
+                    Notificaciones
+                    <ul class="actions">
+                      <li class="dropdown">
+                      {% ifnotequal notificaciones|length 0  %}
+                        <a id="marcar-notificaciones" data-ma-action="clear-notification">
+                          <i class="zmdi zmdi-check-all"></i>
+                        </a>
+                      {% endifnotequal %}
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="lg-body" id="contenedor_notificaciones" >
+                    <div ng-repeat="noti in notificaciones">
+                     <a ng-click="verNotificacion(noti.pk_notificacion)" class="list-group-item media  {[{noti.estado}]}"
+                        href="{[{noti.url}]}" pk-notificacion="{[{noti.pk_notificacion}]}">
+                        <div class="media-body" >
+                          <div class="lgi-heading" id="ti">Ingemax</div>
+                          <small class="lgi-text">{[{noti.notificacion}]}</small>
+                        </div>
+                      </a>
+                    </div>
+                  </div>
+                  {% if notificaciones|length > 5 %}
+                    <a class="view-more" href="">Ver anteriores</a>
+                  {% endif %}
+                </div>
+              </div>
+            </li>
+            <li class="hidden-xs ma-trigger" data-ma-action="sidebar-open" data-ma-target="#chat">
+              <a href="" ng-controller="NumeroConectados">
+                <i ng-if="numero" id="eye-on" class="him-icon zmdi zmdi-eye"></i>
+                <i ng-if="!numero" id="eye-off" class="him-icon zmdi zmdi-eye-off"></i>
+                <i ng-if="numero" id="contador-usuarios-conectados" class="him-counts"></i>
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+    </header>
+    <section id="main">
+      <aside id="sidebar" class="sidebar c-overflow">
+        <div class="s-profile">
+          {% if proyecto.logo %}
+            <a href="" data-ma-action="profile-menu-toggle" style="background: url('{{ proyecto.logo.url }}');background-size: cover;">
+          {% else %}
+            <a href="" data-ma-action="profile-menu-toggle" style="background: url('{% static 'img/IngemaxBILogo.fw.png' %}');background-repeat: repeat-x; background-position: center;">
+          {% endif %}
+            <div class="sp-pic">
+              <img src="{{ request.user.get_imagen_url }}" alt="">
+            </div>
+            <div class="sp-info">
+              {{ request.user.get_full_name }}
+              <i class="zmdi zmdi-caret-down"></i>
+            </div>
+          </a>
+          <ul class="main-menu">
+            <li>
+              <a href="">
+                <i class="zmdi zmdi-settings"></i> Mi cuenta
+              </a>
+            </li>
+            <li>
+              <a href="">
+                <i class="zmdi zmdi-power"></i> Cerrar sesión
+              </a>
+            </li>
+          </ul>
+        </div>
+        <ul class="main-menu">
+          <li>
+            <a href="/">
+              <i class="zmdi zmdi-home"></i> Inicio
+            </a>
+          </li>
+          {% if 'usuarios.view_usuario' in request.user.get_all_permissions or 'auth.view_group' in request.user.get_all_permissions or 'auth.view_permission' in request.user.get_all_permissions %}
+          <li class="sub-menu">
+            <a data-ma-action="submenu-toggle" href=""><i class="him-icon zmdi zmdi-accounts"></i> Gestión de usuarios</a>
+            <ul>
+              {% if 'usuarios.view_usuario' in request.user.get_all_permissions %}
+              <li>
+                <a href=""><i class="zmdi zmdi-accounts"></i> Usuarios</a>
+              </li>
+              {% endif %}
+              {% if 'usuarios.view_grupo' in request.user.get_all_permissions %}
+              <li>
+                <a href=""><i class="zmdi zmdi-accounts-list"></i> Grupos</a>
+              </li>
+              {% endif %}
+              {% if 'usuarios.view_permiso' in request.user.get_all_permissions %}
+              <li>
+                <a href=""><i class="zmdi zmdi-key"></i> Permisos</a>
+              </li>
+              {% endif %}
+            </ul>
+          </li>
+          {% endif %}
+          <li class="divider"></li>
+          <li>
+            <a href="">
+              <i class="zmdi zmdi-settings"></i> Configuracion
+            </a>
+          </li>
+
+          <li class="sub-menu">
+            <a data-ma-action="submenu-toggle" href=""><i class="him-icon zmdi zmdi-collection-text"></i> Informes</a>
+            <ul>
+              <li>
+                <a href=""><i class="zmdi zmdi-view-carousel"></i> Comparacion estado de resultados</a>
+                <a href=""><i class="zmdi zmdi-layers"></i> Informe consolidado de proyectos</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+        <label id="githash" style="position: fixed; bottom: 60px; padding-left: 30px;">Git. {{ githash }}</label>
+      </aside>
+      <aside id="chat" class="sidebar">
+        <div class="lg-body c-overflow">
+          <div class="list-group">
+            <div class="lg-header">
+                Usuarios Conectados
+                <ul class="actions">
+                  <li class="dropdown">
+                  </li>
+                </ul>
+            </div>
+            <div class="mCSB_container mCS_y_hidden mCS_no_scrollbar_y mCS_x_hidden" id="contenedor_usuarios_conectados" ng-controller="InfoConectados">
+             <div ng-repeat="u in usuarios">
+                <a class="list-group-item media" ng-if="u.pk != {{request.user.pk}}" >
+                  <div class="pull-left p-relative ic-usuario-conectado">{[{ u.usuario|capitalize }]}  <i class="chat-status-online estado-conectado"></i></div>
+                  <div class="media-body info-usuario-conectado">
+                    <div class="lgi-heading">{[{u.usuario}]} </div>
+                    <small class="lgi-text">Conectado</small>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <!-- Contenido -->
+      <section id="content" style="margin-bottom:100px;">
+        <div class="container">
+          {% block body %}{% endblock body %}
+        </div>
+      </section>
+      <!-- Page Loader -->
+      <div class="page-loader">
+        <div class="preloader pls-blue">
+          <svg class="pl-circular" viewBox="25 25 50 50">
+            <circle class="plc-path" cx="50" cy="50" r="20" />
+          </svg>
+          <p>Cargando...</p>
+        </div>
+        <img class="animated fadeIn" src="{% static 'img/IngemaxBILogo.fw.png' %}" style="display: block;left: calc(50% - 160px);top: calc(50% + 120px);position: absolute;"/>
+      </div>
+    </section>
+    <!-- Older IE warning message -->
+    <!--[if lt IE 9]>
+        <div class="ie-warning">
+            <h1 class="c-white">Warning!!</h1>
+            <p>You are using an outdated version of Internet Explorer, please upgrade <br/>to any of the following web browsers to access this website.</p>
+            <div class="iew-container">
+                <ul class="iew-download">
+                    <li>
+                        <a href="http://www.google.com/chrome/">
+                            <img src="img/browsers/chrome.png" alt="">
+                            <div>Chrome</div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.mozilla.org/en-US/firefox/new/">
+                            <img src="img/browsers/firefox.png" alt="">
+                            <div>Firefox</div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="http://www.opera.com">
+                            <img src="img/browsers/opera.png" alt="">
+                            <div>Opera</div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.apple.com/safari/">
+                            <img src="img/browsers/safari.png" alt="">
+                            <div>Safari</div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="http://windows.microsoft.com/en-us/internet-explorer/download-ie">
+                            <img src="img/browsers/ie.png" alt="">
+                            <div>IE (New)</div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <p>Sorry for the inconvenience!</p>
+        </div>
+    <![endif]-->
+    <div id="cargando" class="animated fadeIn" style="display: none">
+      <div class="preloader pls-blue">
+        <svg class="pl-circular" viewBox="25 25 50 50">
+          <circle class="plc-path" cx="50" cy="50" r="20" />
+        </svg>
+        <p>Cargando...</p>
+      </div>
+    </div>
+    <!-- Javascript Libraries -->
+    <script src="{% static 'vendors/bower_components/jquery/dist/jquery.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/bootstrap/dist/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'vendors/sparklines/jquery.sparkline.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/jquery.easy-pie-chart/dist/jquery.easypiechart.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/chosen/chosen.jquery.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/moment/min/moment.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/fullcalendar/dist/fullcalendar.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/simpleWeather/jquery.simpleWeather.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/Waves/dist/waves.min.js' %}"></script>
+    <script src="{% static 'vendors/bootstrap-growl/bootstrap-growl.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/sweetalert/dist/sweetalert.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+    <script src="{% static 'vendors/fileinput/fileinput.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js' %}"></script>
+    <script src="{% static 'vendors/summernote/dist/summernote-updated.min.js' %}"></script>
+    <script src="{% static 'vendors/bower_components/autosize/dist/autosize.min.js' %}"></script>
+    <!-- Placeholder for IE9 -->
+    <!--[if IE 9 ]>
+        <script src="{% static 'vendors/bower_components/jquery-placeholder/jquery.placeholder.min.js' %}"></script>
+    <![endif]-->
+    <script src="{% static 'js/math.min.js' %}"></script>
+    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/ajaxsetup.js' %}"></script>
+  </body>
+</html>
