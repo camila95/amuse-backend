@@ -6,6 +6,7 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^', include('comun.urls', namespace='comun')),
+    url(r'^usuario/', include('usuario.urls', namespace='usuario')),
 ]
 
 urlpatterns += [

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+  <input type="text" id="nombre">
+  <input type="text" id="apellido">
+  <button id="guardar">Guardar</button>
+  <ul id="lista"></ul>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script type="text/javascript">
+    cargarListaAcudientes();
+    function cargarListaAcudientes() {
+      $lista = $('#lista');
+      $lista.html('');
+      $.ajax({
+        url: 'http://localhost:8000/usuario/acudiente/',
+        type: 'GET',
+      })
+      .done(function(response) {
+        for(var i in response) {
+          $lista.append('<li>' + response[i]['nombre'] + " " + response[i].apellido + '</li>');
+        }
+      })
+      .fail(function() {
+      })
+      .always(function() {
+      });
+    }
+    function guardar() {
+      var nombre = $('#nombre').val();
+      var apellido = $('#apellido').val();
+      $.ajax({
+        url: 'http://localhost:8000/usuario/acudiente/',
+        type: 'POST',
+        data: {
+          'nombre': nombre,
+          'apellido': apellido
+        }
+      })
+      .done(function(response) {
+        cargarListaAcudientes();
+      })
+      .fail(function() {
+      })
+      .always(function() {
+      });
+    }
+    $('#guardar').click(function() {
+      guardar();
+    });
+  </script>
+</body>
+</html>
